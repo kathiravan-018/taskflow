@@ -44,7 +44,7 @@ function Login() {
       setIsLoggedIn(true);
      
 
-      toast.success("Login Successful 🎉");
+      toast.success("Login Successful ");
       
 
       navigate("/");

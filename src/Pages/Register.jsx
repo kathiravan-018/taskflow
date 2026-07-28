@@ -31,7 +31,7 @@ function Register() {
     try {
       await API.post("register/", formData);
       setIsLoggedIn(true);
-      toast.success("Registration Successful 🎉");
+      toast.success("Registration Successful ");
 
       navigate("/login");
     } catch (error) {
