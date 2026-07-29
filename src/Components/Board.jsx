@@ -3,7 +3,7 @@ import Column from "./Column";
 import AddTaskModal from "../Components/AddTaskModal";
 import TaskCard from "../Components/TaskCard";
 import { useState, useEffect,useContext } from "react";
-import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
+import { closestCenter, DndContext, DragOverlay, closestCorners } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import TaskCardOverlay from "../Components/TaskCardOverlay";
 import { toast } from "sonner";
@@ -263,7 +263,7 @@ console.log("OVER DATA:", over?.data?.current);
       <DndContext 
         onDragEnd={handleDragEnd}
         onDragStart={handleDragStart}
-        collisionDetection={pointerWithin}
+        collisionDetection={closestCenter}
       > 
         {/* Board switcher tabs */}
         <div className="flex items-center gap-3 mb-6 ms-4 flex-wrap">
