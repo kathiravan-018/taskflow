@@ -51,7 +51,7 @@ const style = {
     style={style}
     className={`bg-white rounded-xl p-3 shadow-sm 
     hover:shadow-lg transition-all mb-3
-    ${isDragging ? "scale-105 opacity-50" : ""}`}
+     ${isDragging ? "shadow-xl opacity-90" : ""}`}
   >
 
     {/* Header */}
