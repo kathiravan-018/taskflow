@@ -16,6 +16,7 @@ function Column({ column, tasks, openModal, openEditModal }) {
         columnId: id,
     },
   });
+  console.log(title, id);
 
   function getTitleColor(title) {
     if (title === "Todo") return "text-blue-700";
@@ -27,7 +28,12 @@ function Column({ column, tasks, openModal, openEditModal }) {
   return (
     <div
       ref={setNodeRef}
-      className="bg-white/60 backdrop-blur-md shadow-xl border border-white/50 rounded-xl p-4 min-h-[500px]"
+      className={`
+    rounded-xl
+    min-h-[500px]
+    p-4
+    ${isOver ? "bg-green-200" : "bg-white/60"}
+  `}
     >
       <h2 className={`font-bold text-2xl mb-4 ${getTitleColor(title)}`}>
         {title}
