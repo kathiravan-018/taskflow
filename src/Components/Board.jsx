@@ -110,6 +110,9 @@ function Board() {
   async function handleDragEnd(event) {
   const { active, over } = event;
 
+  console.log("OVER:", over);
+console.log("OVER ID:", over?.id);
+console.log("OVER DATA:", over?.data?.current);
   // Clear drag if dropped outside any droppable
   if (!over) {
     setActiveTask(null);

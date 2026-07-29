@@ -16,7 +16,7 @@ function DeleteZone() {
         z-50
         transition-all
         duration-300
-        ${isOver ? "scale-110" : ""}
+        ${isOver ? "scale-80" : ""}
       `}
     >
       <div
