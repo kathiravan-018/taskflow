@@ -14,7 +14,7 @@ function TaskCardOverlay({ task }) {
 
 
   return (
-    <div className="w-[280px] bg-white rounded-xl p-4 shadow-xl rotate-3">
+    <div className="w-[280px] bg-white rounded-xl p-4 shadow-xl ">
 
       <h3 className="text-lg font-semibold break-all">
         {task.title}
