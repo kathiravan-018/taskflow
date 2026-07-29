@@ -10,7 +10,7 @@ function Column({ column, tasks, openModal, openEditModal }) {
 
   const { id, title } = column;
 
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef , isOver} = useDroppable({
     id,
      data: {
         columnId: id,
