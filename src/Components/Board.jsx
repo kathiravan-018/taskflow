@@ -306,10 +306,10 @@ console.log("OVER DATA:", over?.data?.current);
           ))}
         </div>
 
-        <DragOverlay>
-    {activeTask && (
-        <TaskCardOverlay task={activeTask}/>
-    )}
+        <DragOverlay dropAnimation={null}>
+  {activeTask && (
+    <TaskCardOverlay task={activeTask}/>
+  )}
 </DragOverlay>
         {activeTask && <DeleteZone />}
       </DndContext>

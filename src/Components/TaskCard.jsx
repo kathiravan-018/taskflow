@@ -24,6 +24,7 @@ function TaskCard({ columnId,columnTitle, task, openEditModal }) {
 const style = {
   transform: CSS.Transform.toString(transform),
   transition,
+  opacity: isDragging ? 0.5 : 1,
 };
 
   function getPriorityColor(priority) {
@@ -51,7 +52,7 @@ const style = {
     style={style}
     className={`bg-white rounded-xl p-3 shadow-sm 
     hover:shadow-lg transition-all mb-3
-     ${isDragging ? "shadow-xl opacity-90" : ""}`}
+     ${isDragging ? "shadow-xl " : ""}`}
   >
 
     {/* Header */}

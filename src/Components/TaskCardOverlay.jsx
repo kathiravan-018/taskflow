@@ -14,23 +14,47 @@ function TaskCardOverlay({ task }) {
 
 
   return (
-    <div className="w-[280px] bg-white rounded-xl p-4 shadow-xl ">
+    <div className="
+      w-[280px]
+      bg-white 
+      rounded-xl 
+      p-3 
+      shadow-xl
+      border
+      border-gray-100
+    ">
 
-      <h3 className="text-lg font-semibold break-all">
-        {task.title}
-      </h3>
+      <div className="flex justify-between items-start">
 
-      <p className="text-gray-500 text-sm mt-2 break-all line-clamp-3">
+        <h3 className="font-semibold text-base">
+          {task.title}
+        </h3>
+
+      </div>
+
+
+      <p className="
+        text-sm text-gray-600 
+        mt-2 line-clamp-2
+      ">
         {task.description}
       </p>
 
 
-      <div className="mt-4">
+      <div className="
+        flex justify-between items-center 
+        mt-4
+      ">
+
         <span
-          className={`px-3 py-2 rounded-full text-sm font-medium ${getPriorityColor(task.priority)}`}
+          className={`
+            px-3 py-1 rounded-full text-sm font-medium
+            ${getPriorityColor(task.priority)}
+          `}
         >
           {task.priority}
         </span>
+
       </div>
 
     </div>
