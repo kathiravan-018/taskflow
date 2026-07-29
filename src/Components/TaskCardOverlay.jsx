@@ -15,7 +15,7 @@ function TaskCardOverlay({ task }) {
 
   return (
     <div className="
-      w-[280px]
+      w-[200px]
       bg-white 
       rounded-xl 
       p-3 
