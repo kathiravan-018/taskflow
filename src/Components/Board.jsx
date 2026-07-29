@@ -3,8 +3,9 @@ import Column from "./Column";
 import AddTaskModal from "../Components/AddTaskModal";
 import TaskCard from "../Components/TaskCard";
 import { useState, useEffect,useContext } from "react";
-import { DndContext, DragOverlay, closestCenter } from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import TaskCardOverlay from "../Components/TaskCardOverlay";
 import { toast } from "sonner";
 import DeleteZone from "../Components/DeleteZone";
 import API from "../api/axios";
@@ -107,91 +108,128 @@ function Board() {
   }
 
   async function handleDragEnd(event) {
-    const { active, over } = event;
-    if (!over) {
+  const { active, over } = event;
+
+  // Clear drag if dropped outside any droppable
+  if (!over) {
+    setActiveTask(null);
+    return;
+  }
+
+  const activeColumnId = active.data.current.columnId;
+  const overColumnId = over.data?.current?.columnId ?? over.id;
+
+  console.log("Active:", active.id);
+  console.log("Over:", over.id);
+  console.log("From:", activeColumnId);
+  console.log("To:", overColumnId);
+
+  // ==========================
+  // Delete Task
+  // ==========================
+  if (over.id === "trash") {
+    try {
+      await API.delete(`tasks/${active.id}/`);
+      toast.success("Task deleted successfully");
+      await fetchBoards();
+    } catch (error) {
+      console.log(error.response?.data);
+      toast.error("Couldn't delete task");
+    } finally {
+      setActiveTask(null);
+    }
+    return;
+  }
+
+  // ==========================
+  // Reorder in same column
+  // ==========================
+  if (activeColumnId === overColumnId) {
+    const column = columns.find((c) => c.id === activeColumnId);
+
+    const oldIndex = column.tasks.findIndex(
+      (task) => task.id === active.id
+    );
+
+    const newIndex = column.tasks.findIndex(
+      (task) => task.id === over.id
+    );
+
+    if (oldIndex === -1 || newIndex === -1) {
       setActiveTask(null);
       return;
     }
-    console.log("Over:", over?.id);
-    console.log("Over data:", over?.data?.current);
 
-    const activeColumnId = active.data.current.columnId;
-    const overColumnId = over.data?.current?.columnId ?? over.id;
+    const reorderedTasks = arrayMove(
+      column.tasks,
+      oldIndex,
+      newIndex
+    );
 
-    // Delete Task
-    if (over.id === "trash") {
-      try {
-        await API.delete(`tasks/${active.id}/`);
-        toast.success("Task deleted successfully");
-        await fetchBoards();
-      } catch (error) {
-        console.log(error.response?.data);
-        toast.error("Couldn't delete task");
-      }
-      setActiveTask(null);
-      return;
+    setColumns(
+      columns.map((column) =>
+        column.id === activeColumnId
+          ? { ...column, tasks: reorderedTasks }
+          : column
+      )
+    );
+
+    setActiveTask(null);
+    return;
+  }
+
+  // ==========================
+  // Move to another column
+  // ==========================
+  let draggedTask = null;
+
+  const updatedColumns = columns.map((column) => {
+    if (column.id === activeColumnId) {
+      draggedTask = column.tasks.find(
+        (task) => task.id === active.id
+      );
+
+      return {
+        ...column,
+        tasks: column.tasks.filter(
+          (task) => task.id !== active.id
+        ),
+      };
     }
 
-    // Move within same column
-    if (activeColumnId === overColumnId) {
-      const column = columns.find((c) => c.id === activeColumnId);
-      const oldIndex = column.tasks.findIndex((task) => task.id === active.id);
-      const newIndex = column.tasks.findIndex((task) => task.id === over.id);
+    return column;
+  });
 
-      if (oldIndex === -1 || newIndex === -1) {
-        setActiveTask(null);
-        return;
-      }
-
-      const reorderedTasks = arrayMove(column.tasks, oldIndex, newIndex);
-      const updatedColumns = columns.map((column) => {
-        if (column.id === activeColumnId) {
-          return { ...column, tasks: reorderedTasks };
-        }
-        return column;
-      });
-
-      setColumns(updatedColumns);
-      setActiveTask(null);
-      return;
-    }
-
-    // Move to another column
-    let draggedTask = null;
-    const updatedColumns = columns.map((column) => {
-      if (column.id === activeColumnId) {
-        draggedTask = column.tasks.find((task) => task.id === active.id);
-        return {
-          ...column,
-          tasks: column.tasks.filter((task) => task.id !== active.id),
-        };
-      }
-      return column;
-    });
-
-    const finalColumns = updatedColumns.map((column) => {
-      if (column.id !== overColumnId) return column;
+  const finalColumns = updatedColumns.map((column) => {
+    if (column.id === overColumnId) {
       return {
         ...column,
         tasks: [...column.tasks, draggedTask],
       };
-    });
+    }
 
-    setColumns(finalColumns);
-    setActiveTask(null);
+    return column;
+  });
 
-try {
+  // Update UI immediately
+  setColumns(finalColumns);
+
+  try {
     await API.patch(`tasks/${active.id}/`, {
-        column: overColumnId,
+      column: overColumnId,
     });
 
     await fetchBoards();
-
-} catch (error) {
+  } catch (error) {
+    console.log(error.response?.data);
     toast.error("Couldn't move task");
+
+    // Restore latest data from backend
     await fetchBoards();
-}
+  } finally {
+    setActiveTask(null);
   }
+}
 
   if (boards.length === 0) {
     return (
@@ -222,7 +260,7 @@ try {
       <DndContext 
         onDragEnd={handleDragEnd}
         onDragStart={handleDragStart}
-        collisionDetection={closestCenter}
+        collisionDetection={pointerWithin}
       > 
         {/* Board switcher tabs */}
         <div className="flex items-center gap-3 mb-6 ms-4 flex-wrap">
@@ -266,15 +304,10 @@ try {
         </div>
 
         <DragOverlay>
-          {activeTask ? (
-            <TaskCard
-              task={activeTask}
-              columnId={null}
-              columnTitle=""
-              openEditModal={() => {}}
-            />
-          ) : null}
-        </DragOverlay>
+    {activeTask && (
+        <TaskCardOverlay task={activeTask}/>
+    )}
+</DragOverlay>
         {activeTask && <DeleteZone />}
       </DndContext>
 

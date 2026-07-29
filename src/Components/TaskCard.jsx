@@ -21,13 +21,11 @@ function TaskCard({ columnId,columnTitle, task, openEditModal }) {
   },
 });
 
-  const style={
-    transform:CSS.Transform.toString(transform),
-    transition,
-    position: "relative",
-    opacity:isDragging? 0.3 : 1,
-  
-}
+const style = {
+  transform: CSS.Translate.toString(transform),
+  transition,
+  opacity: isDragging ? 0 : 1,
+};
 
   function getPriorityColor(priority) {
     if (priority === "High") {
