@@ -17,7 +17,7 @@ export default function App() {
     <div className="flex">
       <Sidebar />
 
-      <main className="ml-64 flex-1 min-h-screen bg-gradient-to-br from-violet-100 via-pink-50 to-orange-100">
+      <main className="ml-56 flex-1 min-h-screen bg-gradient-to-br from-violet-100 via-pink-50 to-orange-100">
         <Routes>
           <Route path="/" element={<Home /> } />
           <Route path="/board" 
