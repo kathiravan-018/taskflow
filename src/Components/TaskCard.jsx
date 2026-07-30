@@ -78,8 +78,7 @@ const style = {
 
     {/* Description */}
     <p className="
-      text-sm text-gray-600 
-      mt-2 line-clamp-2
+      text-sm text-gray-600 break-words whitespace-pre-wrap
     ">
       {task.description}
     </p>
