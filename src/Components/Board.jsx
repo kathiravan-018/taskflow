@@ -292,7 +292,7 @@ console.log("OVER DATA:", over?.data?.current);
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-5 ms-5">
+        <div className="flex gap-6 overflow-x-auto mt-5 pb-4">
           {columns.map((column) => (
             <Column
               key={column.id}
