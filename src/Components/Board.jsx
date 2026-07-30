@@ -83,9 +83,9 @@ function Board() {
         });
         toast.success("Task added successfully");
       }
-      await fetchBoards();
       setShowModal(false);
       setEditingTask(null);
+      fetchBoards();
     } catch (error) {
       console.log(error.response?.data);
       toast.error("Operation failed");
@@ -134,7 +134,7 @@ console.log("OVER DATA:", over?.data?.current);
     try {
       await API.delete(`tasks/${active.id}/`);
       toast.success("Task deleted successfully");
-      await fetchBoards();
+      fetchBoards();
     } catch (error) {
       console.log(error.response?.data);
       toast.error("Couldn't delete task");
