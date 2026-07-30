@@ -27,7 +27,7 @@ function Column({ column, tasks, openModal, openEditModal }) {
   return (
     <div
       ref={setNodeRef}
-      className="w-72 flex-shrink-0 bg-white/60 backdrop-blur-md shadow-xl border border-white/50 rounded-xl p-4 min-h-[500px]"
+      className="w-56 flex-shrink-0 bg-white/60 backdrop-blur-md shadow-xl border border-white/50 rounded-xl p-4 min-h-[500px]"
     >
       <h2 className={`font-bold text-2xl mb-4 ${getTitleColor(title)}`}>
         {title}

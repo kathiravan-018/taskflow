@@ -236,7 +236,7 @@ console.log("OVER DATA:", over?.data?.current);
 
   if (boards.length === 0) {
     return (
-      <div className="flex-1 p-8">
+      <div className="flex-1 px-6 py-5">
         <Header search={search} setSearch={setSearch} />
         <div className="flex h-[80vh] items-center justify-center">
           <div className="text-center">
