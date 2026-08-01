@@ -36,7 +36,7 @@ function SettingCard({ icon, title, subtitle }) {
 
 function Settings() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 ml-50 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 ml-30 p-8">
 
       <h1 className="text-4xl font-bold mb-8">
         Settings
