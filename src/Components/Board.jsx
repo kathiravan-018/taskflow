@@ -224,11 +224,12 @@ console.log("OVER DATA:", over?.data?.current);
   setColumns(finalColumns);
 
   try {
+    console.log("Moving task", active.id, "to column", overColumnId);
     await API.patch(`tasks/${active.id}/`, {
       column: overColumnId,
     });
-
     await fetchBoards();
+    console.log("Fetched latest boards");
   } catch (error) {
     console.log(error.response?.data);
     toast.error("Couldn't move task");
