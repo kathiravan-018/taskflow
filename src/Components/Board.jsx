@@ -1,9 +1,9 @@
 import Header from "./Header";
 import Column from "./Column";
 import AddTaskModal from "../Components/AddTaskModal";
-import TaskCard from "../Components/TaskCard";
-import { useState, useEffect,useContext } from "react";
-import { closestCenter, DndContext, DragOverlay, closestCorners } from "@dnd-kit/core";
+import { useState, useEffect, useContext } from "react";
+// 1. ADDED: Imported useSensor, useSensors, and PointerSensor for drag precision
+import { DndContext, DragOverlay, closestCorners, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import TaskCardOverlay from "../Components/TaskCardOverlay";
 import { toast } from "sonner";
@@ -13,7 +13,6 @@ import AddBoardModal from "../Components/AddBoardModal";
 import { BoardContext } from "../Context/BoardContext";
 
 function Board() {
-  
   const [columns, setColumns] = useState([]);
   const [showBoardModal, setShowBoardModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -24,27 +23,25 @@ function Board() {
   const [search, setSearch] = useState("");
 
   const { boards, fetchBoards } = useContext(BoardContext);
-  
+
+  // 2. ADDED: Sensor configuration to stop accidental drag triggers on mouse click
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Drag triggers only after moving 8px, eliminating click/drop mismatches
+      },
+    })
+  );
 
   useEffect(() => {
-  if (boards.length > 0) {
+    if (!boards.length) return;
 
-    const board = selectedBoard
-      ? boards.find((b) => b.id === selectedBoard.id)
-      : boards[0];
+    const currentBoard =
+      boards.find((b) => b.id === selectedBoard?.id) || boards[0];
 
-      
-
-    setSelectedBoard(board);
-    setColumns(board.columns);
-
-    board.columns.forEach((c) => {
-      console.log(c.id, c.title);
-    });
-  }
-}, [boards]);
-
- 
+    setSelectedBoard(currentBoard);
+    setColumns(currentBoard.columns);
+  }, [boards]);
 
   async function createBoard(title) {
     if (!title.trim()) {
@@ -74,12 +71,12 @@ function Board() {
         toast.success("Task updated successfully");
       } else {
         console.log({
-  column: selectedColumnId,
-  title: task.title,
-  description: task.description,
-  priority: task.priority,
-  due_Date: task.due_Date,
-});
+          column: selectedColumnId,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          due_Date: task.due_Date,
+        });
         await API.post("tasks/", {
           column: selectedColumnId,
           title: task.title,
@@ -114,132 +111,134 @@ function Board() {
   }
 
   async function handleDragEnd(event) {
-  const { active, over } = event;
+    const { active, over } = event;
 
-  console.log("OVER:", over);
-console.log("OVER ID:", over?.id);
-console.log("OVER DATA:", over?.data?.current);
-  // Clear drag if dropped outside any droppable
-  if (!over) {
-    setActiveTask(null);
-    return;
-  }
+    console.log("OVER:", over);
+    console.log("OVER ID:", over?.id);
+    console.log("OVER DATA:", over?.data?.current);
 
-  const activeColumnId = active.data.current.columnId;
-  const overColumnId = over.data?.current?.columnId ?? over.id;
-
-  console.log("Active:", active.id);
-  console.log("Over:", over.id);
-  console.log("From:", activeColumnId);
-  console.log("To:", overColumnId);
-
-  // ==========================
-  // Delete Task
-  // ==========================
-  if (over.id === "trash") {
-    try {
-      await API.delete(`tasks/${active.id}/`);
-      toast.success("Task deleted successfully");
-      fetchBoards();
-    } catch (error) {
-      console.log(error.response?.data);
-      toast.error("Couldn't delete task");
-    } finally {
-      setActiveTask(null);
-    }
-    return;
-  }
-
-  // ==========================
-  // Reorder in same column
-  // ==========================
-  if (activeColumnId === overColumnId) {
-    const column = columns.find((c) => c.id === activeColumnId);
-
-    const oldIndex = column.tasks.findIndex(
-      (task) => task.id === active.id
-    );
-
-    const newIndex = column.tasks.findIndex(
-      (task) => task.id === over.id
-    );
-
-    if (oldIndex === -1 || newIndex === -1) {
+    if (!over) {
       setActiveTask(null);
       return;
     }
 
-    const reorderedTasks = arrayMove(
-      column.tasks,
-      oldIndex,
-      newIndex
-    );
+    const activeColumnId = active.data.current.columnId;
+    const overColumnId = over.data?.current?.columnId ?? over.id;
 
-    setColumns(
-      columns.map((column) =>
-        column.id === activeColumnId
-          ? { ...column, tasks: reorderedTasks }
-          : column
-      )
-    );
+    console.log("Active:", active.id);
+    console.log("Over:", over.id);
+    console.log("From:", activeColumnId);
+    console.log("To:", overColumnId);
 
-    setActiveTask(null);
-    return;
-  }
+    // ==========================
+    // Delete Task
+    // ==========================
+    if (over.id === "trash") {
+      try {
+        await API.delete(`tasks/${active.id}/`);
+        toast.success("Task deleted successfully");
+        fetchBoards();
+      } catch (error) {
+        console.log(error.response?.data);
+        toast.error("Couldn't delete task");
+      } finally {
+        setActiveTask(null);
+      }
+      return;
+    }
 
-  // ==========================
-  // Move to another column
-  // ==========================
-  let draggedTask = null;
+    // ==========================
+    // Reorder in same column
+    // ==========================
+    if (activeColumnId === overColumnId) {
+      const column = columns.find((c) => c.id === activeColumnId);
 
-  const updatedColumns = columns.map((column) => {
-    if (column.id === activeColumnId) {
-      draggedTask = column.tasks.find(
+      const oldIndex = column.tasks.findIndex(
         (task) => task.id === active.id
       );
 
-      return {
-        ...column,
-        tasks: column.tasks.filter(
-          (task) => task.id !== active.id
-        ),
-      };
+      const newIndex = column.tasks.findIndex(
+        (task) => task.id === over.id
+      );
+
+      if (oldIndex === -1 || newIndex === -1) {
+        setActiveTask(null);
+        return;
+      }
+
+      const reorderedTasks = arrayMove(
+        column.tasks,
+        oldIndex,
+        newIndex
+      );
+
+      setColumns(
+        columns.map((column) =>
+          column.id === activeColumnId
+            ? { ...column, tasks: reorderedTasks }
+            : column
+        )
+      );
+
+      setActiveTask(null);
+      return;
     }
 
-    return column;
-  });
+    // ==========================
+    // Move to another column
+    // ==========================
+    let draggedTask = null;
 
-  const finalColumns = updatedColumns.map((column) => {
-    if (column.id === overColumnId) {
-      return {
-        ...column,
-        tasks: [...column.tasks, draggedTask],
-      };
-    }
+    const updatedColumns = columns.map((column) => {
+      if (column.id === activeColumnId) {
+        draggedTask = column.tasks.find(
+          (task) => task.id === active.id
+        );
 
-    return column;
-  });
+        return {
+          ...column,
+          tasks: column.tasks.filter(
+            (task) => task.id !== active.id
+          ),
+        };
+      }
 
-  // Update UI immediately
-  setColumns(finalColumns);
-
-  try {
-    console.log("Moving task", active.id, "to column", overColumnId);
-    await API.patch(`tasks/${active.id}/`, {
-      column: overColumnId,
+      return column;
     });
-    await fetchBoards();
-    console.log("Fetched latest boards");
-  } catch (error) {
-    console.log(error.response?.data);
-    toast.error("Couldn't move task");
 
-    // Restore latest data from backend
-    await fetchBoards();
-  } finally {
-    setActiveTask(null);
+    const finalColumns = updatedColumns.map((column) => {
+      if (column.id === overColumnId) {
+        return {
+          ...column,
+          tasks: [...column.tasks, draggedTask],
+        };
+      }
+
+      return column;
+    });
+
+    // Update UI immediately
+    setColumns(finalColumns);
+
+    try {
+      console.log("Before PATCH");
+      console.log("Moving task", active.id, "to column", overColumnId);
+
+      await API.patch(`tasks/${active.id}/`, {
+        column: overColumnId,
+      });
+
+      console.log("PATCH completed");
+      await fetchBoards();
+      console.log("Fetched latest boards");
+    } catch (error) {
+      console.log(error.response?.data);
+      toast.error("Couldn't move task");
+      await fetchBoards();
+    } finally {
+      setActiveTask(null);
+    }
   }
-}
 
   if (boards.length === 0) {
     return (
@@ -267,10 +266,12 @@ console.log("OVER DATA:", over?.data?.current);
     <div className="flex-1 p-8">
       <Header search={search} setSearch={setSearch}/>
       
+      {/* 3. MODIFIED: Added sensors configuration and changed collisionDetection to closestCorners */}
       <DndContext 
+        sensors={sensors}
         onDragEnd={handleDragEnd}
         onDragStart={handleDragStart}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
       > 
         {/* Board switcher tabs */}
         <div className="flex items-center gap-3 mb-6 ms-4 flex-wrap">
@@ -290,7 +291,6 @@ console.log("OVER DATA:", over?.data?.current);
               {board.title}
             </button>
           ))}
-          {/* Functional addition: Add board button when board exists */}
           <button
             onClick={() => setShowBoardModal(true)}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition"
@@ -314,10 +314,10 @@ console.log("OVER DATA:", over?.data?.current);
         </div>
 
         <DragOverlay dropAnimation={null}>
-  {activeTask && (
-    <TaskCardOverlay task={activeTask}/>
-  )}
-</DragOverlay>
+          {activeTask && (
+            <TaskCardOverlay task={activeTask}/>
+          )}
+        </DragOverlay>
         {activeTask && <DeleteZone />}
       </DndContext>
 
@@ -335,8 +335,6 @@ console.log("OVER DATA:", over?.data?.current);
           onSave={addTask}
         />
       )}
-
- 
     </div>
   );
 }
