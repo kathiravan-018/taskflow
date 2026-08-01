@@ -7,13 +7,13 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 
 function Column({ column, tasks, openModal, openEditModal }) {
-
   const { id, title } = column;
 
+  // FIX: Prefix the droppable element ID to prevent numeric collisions with Task IDs
   const { setNodeRef } = useDroppable({
-    id,
-     data: {
-        columnId: id,
+    id: `column-${id}`,
+    data: {
+      columnId: id,
     },
   });
 
@@ -33,8 +33,9 @@ function Column({ column, tasks, openModal, openEditModal }) {
         {title}
       </h2>
 
+      {/* FIX: SortableContext items must match the prefixed IDs used in TaskCard's useSortable hook */}
       <SortableContext
-        items={tasks.map((task) => task.id)}
+        items={tasks.map((task) => `task-${task.id}`)}
         strategy={verticalListSortingStrategy}
       >
         {tasks.map((task) => (

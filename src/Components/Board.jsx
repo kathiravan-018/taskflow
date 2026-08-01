@@ -118,141 +118,117 @@ function Board() {
   }
 
   async function handleDragEnd(event) {
-    const { active, over } = event;
+  const { active, over } = event;
 
-    console.log("OVER:", over);
-    console.log("OVER ID:", over?.id);
-    console.log("OVER DATA:", over?.data?.current);
-
-    if (!over) {
-      setActiveTask(null);
-      isSyncingRef.current = false;
-      return;
-    }
-
-    const activeColumnId = active.data.current.columnId;
-    const overColumnId = over.data?.current?.columnId ?? over.id;
-
-    console.log("Active:", active.id);
-    console.log("Over:", over.id);
-    console.log("From:", activeColumnId);
-    console.log("To:", overColumnId);
-
-    // ==========================
-    // Delete Task
-    // ==========================
-    if (over.id === "trash") {
-      try {
-        await API.delete(`tasks/${active.id}/`);
-        toast.success("Task deleted successfully");
-        await fetchBoards();
-      } catch (error) {
-        console.log(error.response?.data);
-        toast.error("Couldn't delete task");
-      } finally {
-        setActiveTask(null);
-        isSyncingRef.current = false;
-      }
-      return;
-    }
-
-    // ==========================
-    // Reorder in same column
-    // ==========================
-    if (activeColumnId === overColumnId) {
-      const column = columns.find((c) => c.id === activeColumnId);
-
-      const oldIndex = column.tasks.findIndex(
-        (task) => task.id === active.id
-      );
-
-      const newIndex = column.tasks.findIndex(
-        (task) => task.id === over.id
-      );
-
-      if (oldIndex === -1 || newIndex === -1) {
-        setActiveTask(null);
-        isSyncingRef.current = false;
-        return;
-      }
-
-      const reorderedTasks = arrayMove(
-        column.tasks,
-        oldIndex,
-        newIndex
-      );
-
-      setColumns(
-        columns.map((column) =>
-          column.id === activeColumnId
-            ? { ...column, tasks: reorderedTasks }
-            : column
-        )
-      );
-
-      setActiveTask(null);
-      isSyncingRef.current = false;
-      return;
-    }
-
-    // ==========================
-    // Move to another column
-    // ==========================
-    let draggedTask = null;
-
-    const updatedColumns = columns.map((column) => {
-      if (column.id === activeColumnId) {
-        draggedTask = column.tasks.find(
-          (task) => task.id === active.id
-        );
-
-        return {
-          ...column,
-          tasks: column.tasks.filter(
-            (task) => task.id !== active.id
-          ),
-        };
-      }
-
-      return column;
-    });
-
-    const finalColumns = updatedColumns.map((column) => {
-      if (column.id === overColumnId) {
-        return {
-          ...column,
-          tasks: [...column.tasks, draggedTask],
-        };
-      }
-
-      return column;
-    });
-
-    // Update the local columns frame array layout first
-    setColumns(finalColumns);
+  if (!over) {
     setActiveTask(null);
+    isSyncingRef.current = false;
+    return;
+  }
 
+  // Extract pure database integer IDs by stripping out the string prefixes
+  const activeTaskId = parseInt(active.id.toString().replace("task-", ""));
+  const activeColumnId = parseInt(active.data.current.columnId);
+  
+  if (over.id === "trash") {
     try {
-      console.log("Before PATCH");
-      console.log("Moving task", active.id, "to column", overColumnId);
-
-      await API.patch(`tasks/${active.id}/`, {
-        column: overColumnId,
-      });
-
-      console.log("PATCH completed");
-      
-      // Release sync block right before fetch calls to allow structural context paint
-      isSyncingRef.current = false;
+      await API.delete(`tasks/${activeTaskId}/`);
+      toast.success("Task deleted successfully");
       await fetchBoards();
-      console.log("Fetched latest boards");
     } catch (error) {
-      console.log(error.response?.data);
-      toast.error("Couldn't move task");
+      toast.error("Couldn't delete task");
+    } finally {
+      setActiveTask(null);
       isSyncingRef.current = false;
-      await fetchBoards();
+    }
+    return;
+  }
+
+  // Safely find target column ID regardless of dropping on an empty column or another task card
+  let overColumnId = over.data?.current?.columnId;
+  if (!overColumnId) {
+    const rawOverId = parseInt(over.id.toString().replace("column-", "").replace("task-", ""));
+    const targetColumn = columns.find(c => c.id === rawOverId);
+    if (targetColumn) {
+      overColumnId = targetColumn.id;
+    } else {
+      for (const col of columns) {
+        if (col.tasks.some(t => t.id === rawOverId)) {
+          overColumnId = col.id;
+          break;
+        }
+      }
     }
   }
+  overColumnId = parseInt(overColumnId);
+
+  // ==========================
+  // Reorder in same column
+  // ==========================
+  if (activeColumnId === overColumnId) {
+    const column = columns.find((c) => c.id === activeColumnId);
+    const overTaskId = parseInt(over.id.toString().replace("task-", ""));
+
+    const oldIndex = column.tasks.findIndex((task) => task.id === activeTaskId);
+    const newIndex = column.tasks.findIndex((task) => task.id === overTaskId);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      setActiveTask(null);
+      isSyncingRef.current = false;
+      return;
+    }
+
+    const reorderedTasks = arrayMove(column.tasks, oldIndex, newIndex);
+    setColumns(
+      columns.map((col) =>
+        col.id === activeColumnId ? { ...col, tasks: reorderedTasks } : col
+      )
+    );
+
+    setActiveTask(null);
+    isSyncingRef.current = false;
+    return;
+  }
+
+  // ==========================
+  // Move to another column
+  // ==========================
+  let draggedTask = null;
+  const updatedColumns = columns.map((col) => {
+    if (col.id === activeColumnId) {
+      draggedTask = col.tasks.find((task) => task.id === activeTaskId);
+      return {
+        ...col,
+        tasks: col.tasks.filter((task) => task.id !== activeTaskId),
+      };
+    }
+    return col;
+  });
+
+  const finalColumns = updatedColumns.map((col) => {
+    if (col.id === overColumnId) {
+      return {
+        ...col,
+        tasks: [...col.tasks, draggedTask],
+      };
+    }
+    return col;
+  });
+
+  setColumns(finalColumns);
+  setActiveTask(null);
+
+  try {
+    await API.patch(`tasks/${activeTaskId}/`, { column: overColumnId });
+    isSyncingRef.current = false;
+    await fetchBoards();
+  } catch (error) {
+    toast.error("Couldn't move task");
+    isSyncingRef.current = false;
+    await fetchBoards();
+  }
+}
+
 
   if (boards.length === 0) {
     return (
