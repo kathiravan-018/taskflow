@@ -1,9 +1,9 @@
 import Header from "./Header";
 import Column from "./Column";
 import AddTaskModal from "../Components/AddTaskModal";
-import { useState, useEffect, useContext } from "react";
-// 1. ADDED: Imported useSensor, useSensors, and PointerSensor for drag precision
-import { DndContext, DragOverlay, closestCorners, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
+import TaskCard from "../Components/TaskCard";
+import { useState, useEffect, useContext, useRef } from "react";
+import { closestCenter, DndContext, DragOverlay, closestCorners, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import TaskCardOverlay from "../Components/TaskCardOverlay";
 import { toast } from "sonner";
@@ -24,23 +24,29 @@ function Board() {
 
   const { boards, fetchBoards } = useContext(BoardContext);
 
-  // 2. ADDED: Sensor configuration to stop accidental drag triggers on mouse click
+  // Reference tracking token to manage network response paint order
+  const isSyncingRef = useRef(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Drag triggers only after moving 8px, eliminating click/drop mismatches
+        distance: 8,
       },
     })
   );
 
   useEffect(() => {
     if (!boards.length) return;
+    
+    // Safety check to lock baseline render when mid-flight drag resolutions occur
+    if (isSyncingRef.current) return;
 
     const currentBoard =
       boards.find((b) => b.id === selectedBoard?.id) || boards[0];
 
     setSelectedBoard(currentBoard);
-    setColumns(currentBoard.columns);
+    // Added a structural fallback array to prevent "cannot read properties of undefined" component runtime errors
+    setColumns(currentBoard?.columns || []);
   }, [boards]);
 
   async function createBoard(title) {
@@ -107,6 +113,7 @@ function Board() {
   }
 
   function handleDragStart(event){
+    isSyncingRef.current = true;
     setActiveTask(event.active.data.current.task);
   }
 
@@ -119,6 +126,7 @@ function Board() {
 
     if (!over) {
       setActiveTask(null);
+      isSyncingRef.current = false;
       return;
     }
 
@@ -137,12 +145,13 @@ function Board() {
       try {
         await API.delete(`tasks/${active.id}/`);
         toast.success("Task deleted successfully");
-        fetchBoards();
+        await fetchBoards();
       } catch (error) {
         console.log(error.response?.data);
         toast.error("Couldn't delete task");
       } finally {
         setActiveTask(null);
+        isSyncingRef.current = false;
       }
       return;
     }
@@ -163,6 +172,7 @@ function Board() {
 
       if (oldIndex === -1 || newIndex === -1) {
         setActiveTask(null);
+        isSyncingRef.current = false;
         return;
       }
 
@@ -181,6 +191,7 @@ function Board() {
       );
 
       setActiveTask(null);
+      isSyncingRef.current = false;
       return;
     }
 
@@ -217,8 +228,9 @@ function Board() {
       return column;
     });
 
-    // Update UI immediately
+    // Update the local columns frame array layout first
     setColumns(finalColumns);
+    setActiveTask(null);
 
     try {
       console.log("Before PATCH");
@@ -229,14 +241,16 @@ function Board() {
       });
 
       console.log("PATCH completed");
+      
+      // Release sync block right before fetch calls to allow structural context paint
+      isSyncingRef.current = false;
       await fetchBoards();
       console.log("Fetched latest boards");
     } catch (error) {
       console.log(error.response?.data);
       toast.error("Couldn't move task");
+      isSyncingRef.current = false;
       await fetchBoards();
-    } finally {
-      setActiveTask(null);
     }
   }
 
@@ -266,7 +280,6 @@ function Board() {
     <div className="flex-1 p-8">
       <Header search={search} setSearch={setSearch}/>
       
-      {/* 3. MODIFIED: Added sensors configuration and changed collisionDetection to closestCorners */}
       <DndContext 
         sensors={sensors}
         onDragEnd={handleDragEnd}
@@ -280,7 +293,7 @@ function Board() {
               key={board.id}
               onClick={() => {
                 setSelectedBoard(board);
-                setColumns(board.columns);
+                setColumns(board.columns || []);
               }}
               className={`px-4 py-2 rounded-lg transition ${
                 selectedBoard?.id === board.id
@@ -315,7 +328,9 @@ function Board() {
 
         <DragOverlay dropAnimation={null}>
           {activeTask && (
-            <TaskCardOverlay task={activeTask}/>
+            <div style={{ pointerEvents: 'none' }}>
+              <TaskCardOverlay task={activeTask}/>
+            </div>
           )}
         </DragOverlay>
         {activeTask && <DeleteZone />}
@@ -328,10 +343,8 @@ function Board() {
       {showModal && (
         <AddTaskModal
           editingTask={editingTask}
-          onClose={() => {
-            setShowModal(false);
-            setEditingTask(null);
-          }}
+          onClose={() => {setShowModal(false);
+            setEditingTask(null);}}
           onSave={addTask}
         />
       )}
