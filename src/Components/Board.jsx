@@ -33,8 +33,14 @@ function Board() {
       ? boards.find((b) => b.id === selectedBoard.id)
       : boards[0];
 
+      
+
     setSelectedBoard(board);
     setColumns(board.columns);
+
+    board.columns.forEach((c) => {
+      console.log(c.id, c.title);
+    });
   }
 }, [boards]);
 
